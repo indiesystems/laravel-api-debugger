@@ -381,12 +381,23 @@ class ApiDebuggerService
 
     /**
      * Delete old logs based on retention policy.
+     * Uses chunked deletion to avoid memory issues with large datasets.
      */
     public function pruneOldLogs(): int
     {
         $hours = config('api-debugger.retention.hours', 24);
+        $cutoff = now()->subHours($hours);
+        $totalDeleted = 0;
 
-        return ApiLog::where('created_at', '<', now()->subHours($hours))->delete();
+        // Delete in chunks to avoid memory issues
+        do {
+            $deleted = ApiLog::where('created_at', '<', $cutoff)
+                ->limit(1000)
+                ->delete();
+            $totalDeleted += $deleted;
+        } while ($deleted > 0);
+
+        return $totalDeleted;
     }
 
     /**

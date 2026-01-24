@@ -325,15 +325,14 @@ class ApiDebuggerController extends Controller
      */
     protected function calculateErrorRate(): float
     {
-        $today = ApiLog::whereDate('created_at', today());
-        $total = $today->count();
+        $stats = ApiLog::whereDate('created_at', today())
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors')
+            ->first();
 
-        if ($total === 0) {
+        if (!$stats || $stats->total === 0) {
             return 0;
         }
 
-        $errors = (clone $today)->where('status_code', '>=', 400)->count();
-
-        return round(($errors / $total) * 100, 2);
+        return round(($stats->errors / $stats->total) * 100, 2);
     }
 }
