@@ -149,11 +149,25 @@
 // Global function for log detail modal
 function showLogDetail(row) {
     const jsonUrl = row.dataset.jsonUrl;
-    const modal = $('#log-detail-modal');
+    const modalEl = document.getElementById('log-detail-modal');
     const modalBody = document.getElementById('modal-body');
 
     modalBody.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-    modal.modal('show');
+
+    // Try Bootstrap 5 first, then Bootstrap 4/jQuery, then fallback
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        new bootstrap.Modal(modalEl).show();
+    } else if (typeof jQuery !== 'undefined' && jQuery.fn.modal) {
+        jQuery(modalEl).modal('show');
+    } else {
+        modalEl.classList.add('show');
+        modalEl.style.display = 'block';
+        document.body.classList.add('modal-open');
+        var backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.id = 'modal-backdrop';
+        document.body.appendChild(backdrop);
+    }
 
     fetch(jsonUrl)
         .then(response => {
