@@ -75,7 +75,17 @@ class ApiLog extends Model
 
     public function getConnectionName(): ?string
     {
-        return config('api-debugger.connection') ?? parent::getConnectionName();
+        // If a specific connection is configured, use it
+        if ($connection = config('api-debugger.connection')) {
+            return $connection;
+        }
+
+        // If in tenant context (stancl/tenancy), use central connection
+        if (function_exists('tenancy') && tenancy()->initialized) {
+            return config('tenancy.database.central_connection', 'mysql');
+        }
+
+        return parent::getConnectionName();
     }
 
     /*

@@ -40,6 +40,10 @@ return [
     | Optionally use a separate database connection for logs.
     | Set to null to use the default connection.
     |
+    | For multi-tenancy (stancl/tenancy): The package auto-detects tenant
+    | context and uses the central connection. You can also explicitly set
+    | this to your central connection name (e.g., 'mysql' or 'central').
+    |
     */
     'connection' => env('API_DEBUGGER_DB_CONNECTION', null),
 
