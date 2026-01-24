@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use IndieSystems\ApiDebugger\Controllers\ApiDebuggerController;
 
 Route::get('/', [ApiDebuggerController::class, 'index'])->name('api-debugger.index');
+Route::get('/routes', [ApiDebuggerController::class, 'routes'])->name('api-debugger.routes');
 
 // Logs
 Route::get('/logs', [ApiDebuggerController::class, 'logs'])->name('api-debugger.logs');

@@ -19,6 +19,8 @@
 
 <section class="content">
     <div class="container-fluid">
+        @include('api-debugger::partials.nav')
+
         {{-- Filters --}}
         <div class="card card-outline card-secondary {{ request()->hasAny(['method', 'status', 'search', 'session_id', 'tenant_id', 'user_id']) ? '' : 'collapsed-card' }}">
             <div class="card-header">

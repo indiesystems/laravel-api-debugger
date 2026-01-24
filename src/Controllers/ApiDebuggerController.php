@@ -263,6 +263,64 @@ class ApiDebuggerController extends Controller
     }
 
     /**
+     * List API routes.
+     */
+    public function routes(Request $request)
+    {
+        $apiPrefixes = config('api-debugger.routes.api_prefixes', ['api', 'api/*', 'tenant/*/api']);
+        $showAllRoutes = $request->boolean('all');
+
+        $routes = collect(app('router')->getRoutes())
+            ->filter(function ($route) use ($apiPrefixes, $showAllRoutes) {
+                if ($showAllRoutes) {
+                    return true;
+                }
+
+                $uri = $route->uri();
+                $middleware = $route->middleware();
+
+                // Check if route matches any API prefix pattern
+                foreach ($apiPrefixes as $prefix) {
+                    if (str_contains($prefix, '*')) {
+                        $pattern = str_replace('*', '.*', $prefix);
+                        if (preg_match('#^' . $pattern . '#', $uri)) {
+                            return true;
+                        }
+                    } elseif (str_starts_with($uri, $prefix . '/') || $uri === $prefix) {
+                        return true;
+                    }
+                }
+
+                // Check middleware
+                return in_array('api', $middleware) ||
+                       collect($middleware)->contains(fn($m) => str_contains($m, 'api'));
+            })
+            ->map(function ($route) {
+                return [
+                    'methods' => $route->methods(),
+                    'uri' => $route->uri(),
+                    'name' => $route->getName(),
+                    'action' => $route->getActionName(),
+                    'middleware' => $route->middleware(),
+                    'parameters' => $this->extractRouteParameters($route->uri()),
+                ];
+            })
+            ->sortBy('uri')
+            ->values();
+
+        return view('api-debugger::routes', compact('routes'));
+    }
+
+    /**
+     * Extract parameters from route URI.
+     */
+    protected function extractRouteParameters(string $uri): array
+    {
+        preg_match_all('/\{([^}]+)\}/', $uri, $matches);
+        return $matches[1] ?? [];
+    }
+
+    /**
      * Calculate error rate for today.
      */
     protected function calculateErrorRate(): float

@@ -105,6 +105,14 @@ return [
             '_debugbar/*',
             'sanctum/*',
         ],
+
+        // API route prefixes for the routes list view (supports wildcards)
+        'api_prefixes' => [
+            'api',
+            'api/*',
+            'tenant/*/api',
+            '*/api',
+        ],
     ],
 
     /*

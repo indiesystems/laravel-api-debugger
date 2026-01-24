@@ -19,6 +19,8 @@
 
 <section class="content">
     <div class="container-fluid">
+        @include('api-debugger::partials.nav')
+
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>

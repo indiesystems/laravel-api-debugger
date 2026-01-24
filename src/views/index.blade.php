@@ -19,6 +19,8 @@
 
 <section class="content">
     <div class="container-fluid">
+        @include('api-debugger::partials.nav')
+
         {{-- Stats Row --}}
         <div class="row">
             <div class="col-lg-3 col-6">

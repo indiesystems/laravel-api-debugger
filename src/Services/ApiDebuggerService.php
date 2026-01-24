@@ -144,8 +144,8 @@ class ApiDebuggerService
      */
     public function getActiveSession(Request $request): ?ApiDebugSession
     {
-        // First, check for explicit debug token header
-        $debugToken = $request->header('X-Debug-Token');
+        // First, check for explicit debug token (header or query param)
+        $debugToken = $request->header('X-Debug-Token') ?? $request->query('_debug_token');
         if ($debugToken) {
             return $this->getSessionByToken($debugToken);
         }
