@@ -130,7 +130,7 @@
                     <span id="modal-method" class="badge"></span>
                     <span id="modal-url"></span>
                 </h5>
-                <button type="button" class="close" data-dismiss="modal">
+                <button type="button" class="close" data-dismiss="modal" onclick="closeLogModal()">
                     <span>&times;</span>
                 </button>
             </div>
@@ -146,6 +146,16 @@
 
 @section('scripts')
 <script>
+// Close modal function (vanilla JS fallback)
+function closeLogModal() {
+    var modalEl = document.getElementById('log-detail-modal');
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+    document.body.classList.remove('modal-open');
+    var backdrop = document.getElementById('modal-backdrop');
+    if (backdrop) backdrop.remove();
+}
+
 // Global function for log detail modal
 function showLogDetail(row) {
     const jsonUrl = row.dataset.jsonUrl;
