@@ -173,20 +173,21 @@ class ApiDebuggerController extends Controller
     public function createSession(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:tenant,user',
-            'tenant_id' => 'required_if:type,tenant|nullable|string|max:255',
-            'user_id' => 'required_if:type,user|nullable|integer|exists:users,id',
+            'type' => 'required|in:all,tenant,user',
             'duration' => 'nullable|integer|min:1|max:' . config('api-debugger.session.max_duration', 120),
             'label' => 'nullable|string|max:255',
+            'target_id' => 'required_unless:type,all|nullable|string|max:255',
         ]);
 
         $duration = $request->duration ?? config('api-debugger.session.default_duration', 30);
         $createdBy = auth()->id();
 
-        if ($request->type === 'tenant') {
-            $session = $this->debugger->enableForTenant($request->tenant_id, $duration, $createdBy);
+        if ($request->type === 'all') {
+            $session = $this->debugger->enableGlobal($duration, $createdBy);
+        } elseif ($request->type === 'tenant') {
+            $session = $this->debugger->enableForTenant($request->target_id, $duration, $createdBy);
         } else {
-            $session = $this->debugger->enableForUser($request->user_id, $duration, $createdBy);
+            $session = $this->debugger->enableForUser($request->target_id, $duration, $createdBy);
         }
 
         if ($request->filled('label')) {

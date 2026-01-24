@@ -1,7 +1,7 @@
 {
     "name": "indiesystems/laravel-api-debugger",
-    "description": "A Laravel package for debugging API requests/responses with AdminLTE UI",
-    "keywords": ["laravel", "indiesystems", "api", "debugger", "logging", "adminlte", "bootstrap"],
+    "description": "A Laravel package for debugging API requests/responses with session-based logging and AdminLTE UI",
+    "keywords": ["laravel", "api", "debugger", "logging", "requests", "responses", "adminlte", "bootstrap", "multi-tenant"],
     "type": "library",
     "license": "MIT",
     "authors": [{
@@ -11,9 +11,30 @@
         "role": "Developer"
     }],
     "homepage": "https://github.com/indiesystems/laravel-api-debugger",
+    "support": {
+        "issues": "https://github.com/indiesystems/laravel-api-debugger/issues",
+        "source": "https://github.com/indiesystems/laravel-api-debugger"
+    },
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/database": "^10.0|^11.0",
+        "illuminate/http": "^10.0|^11.0",
+        "illuminate/routing": "^10.0|^11.0",
+        "illuminate/console": "^10.0|^11.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0",
+        "phpunit/phpunit": "^10.0"
+    },
     "autoload": {
         "psr-4": {
             "IndieSystems\\ApiDebugger\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IndieSystems\\ApiDebugger\\Tests\\": "tests/"
         }
     },
     "extra": {
@@ -23,10 +44,9 @@
             ]
         }
     },
+    "config": {
+        "sort-packages": true
+    },
     "minimum-stability": "dev",
-    "prefer-stable": true,
-    "require": {
-        "php": ">=8.1",
-        "indiesystems/laravel-adminlte-ui-components": "*"
-    }
+    "prefer-stable": true
 }

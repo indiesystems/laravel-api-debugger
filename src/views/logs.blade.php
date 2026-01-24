@@ -20,14 +20,14 @@
 <section class="content">
     <div class="container-fluid">
         {{-- Filters --}}
-        <div class="card card-outline card-secondary collapsed-card">
+        <div class="card card-outline card-secondary {{ request()->hasAny(['method', 'status', 'search', 'session_id', 'tenant_id', 'user_id']) ? '' : 'collapsed-card' }}">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-filter mr-2"></i>Filters
                 </h3>
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-{{ request()->hasAny(['method', 'status', 'search', 'session_id', 'tenant_id', 'user_id']) ? 'minus' : 'plus' }}"></i>
                     </button>
                 </div>
             </div>
@@ -142,8 +142,35 @@
 </div>
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script>
+// Global function for log detail modal
+function showLogDetail(row) {
+    const jsonUrl = row.dataset.jsonUrl;
+    const modal = $('#log-detail-modal');
+    const modalBody = document.getElementById('modal-body');
+
+    modalBody.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    modal.modal('show');
+
+    fetch(jsonUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('modal-method').textContent = data.method;
+            document.getElementById('modal-method').className = 'badge badge-' + data.method_color;
+            document.getElementById('modal-url').textContent = data.url;
+            modalBody.innerHTML = renderLogDetail(data);
+        })
+        .catch(error => {
+            modalBody.innerHTML = '<div class="alert alert-danger">Failed to load details: ' + error.message + '</div>';
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const refreshInterval = {{ config('api-debugger.ui.refresh_interval', 5) }} * 1000;
     let autoRefreshTimer = null;
@@ -159,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.text())
         .then(html => {
             logsContainer.innerHTML = html;
-            bindRowClicks();
         });
     }
 
@@ -192,105 +218,81 @@ document.addEventListener('DOMContentLoaded', function() {
     if (autoRefreshCheckbox.checked) {
         startAutoRefresh();
     }
+});
 
-    // Log detail modal
-    function bindRowClicks() {
-        document.querySelectorAll('.log-row').forEach(row => {
-            row.addEventListener('click', function() {
-                const logId = this.dataset.logId;
-                const modal = $('#log-detail-modal');
-                const modalBody = document.getElementById('modal-body');
+function renderLogDetail(data) {
+    return `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-outline card-info">
+                    <div class="card-header"><h5 class="card-title mb-0">Request</h5></div>
+                    <div class="card-body">
+                        <p><strong>Time:</strong> ${data.requested_at}</p>
+                        <p><strong>URL:</strong> <code>${data.full_url}</code></p>
+                        <p><strong>Route:</strong> ${data.route_name || 'N/A'}</p>
+                        <p><strong>IP:</strong> ${data.ip_address}</p>
+                        <p><strong>Size:</strong> ${data.request_size || 'N/A'}</p>
 
-                modalBody.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-                modal.modal('show');
+                        <h6 class="mt-3">Headers</h6>
+                        <pre class="bg-light p-2 small" style="max-height:200px;overflow:auto">${JSON.stringify(data.request_headers, null, 2)}</pre>
 
-                fetch('{{ route("api-debugger.logs.index") }}/' + logId + '/json')
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById('modal-method').textContent = data.method;
-                        document.getElementById('modal-method').className = 'badge badge-' + data.method_color;
-                        document.getElementById('modal-url').textContent = data.url;
-                        modalBody.innerHTML = renderLogDetail(data);
-                    });
-            });
-        });
-    }
+                        ${data.request_query && Object.keys(data.request_query).length ? `
+                            <h6 class="mt-3">Query Parameters</h6>
+                            <pre class="bg-light p-2 small">${JSON.stringify(data.request_query, null, 2)}</pre>
+                        ` : ''}
 
-    function renderLogDetail(data) {
-        return `
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card card-outline card-info">
-                        <div class="card-header"><h5 class="card-title mb-0">Request</h5></div>
-                        <div class="card-body">
-                            <p><strong>Time:</strong> ${data.requested_at}</p>
-                            <p><strong>IP:</strong> ${data.ip_address}</p>
-                            <p><strong>Route:</strong> ${data.route_name || 'N/A'}</p>
-                            <p><strong>Size:</strong> ${data.request_size}</p>
-
-                            <h6 class="mt-3">Headers</h6>
-                            <pre class="bg-light p-2 small" style="max-height:200px;overflow:auto">${JSON.stringify(data.request_headers, null, 2)}</pre>
-
-                            ${data.request_query && Object.keys(data.request_query).length ? `
-                                <h6 class="mt-3">Query Parameters</h6>
-                                <pre class="bg-light p-2 small">${JSON.stringify(data.request_query, null, 2)}</pre>
-                            ` : ''}
-
-                            ${data.request_body ? `
-                                <h6 class="mt-3">Body</h6>
-                                <pre class="bg-light p-2 small" style="max-height:300px;overflow:auto">${typeof data.request_body === 'object' ? JSON.stringify(data.request_body, null, 2) : escapeHtml(data.request_body)}</pre>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-outline card-${data.status_color}">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                Response
-                                <span class="badge badge-${data.status_color}">${data.status_code}</span>
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Time:</strong> ${data.responded_at}</p>
-                            <p><strong>Duration:</strong> ${data.duration}</p>
-                            <p><strong>Size:</strong> ${data.response_size}</p>
-                            <p><strong>Memory Peak:</strong> ${data.memory_peak_mb || 'N/A'}</p>
-
-                            <h6 class="mt-3">Headers</h6>
-                            <pre class="bg-light p-2 small" style="max-height:200px;overflow:auto">${JSON.stringify(data.response_headers, null, 2)}</pre>
-
-                            ${data.response_body ? `
-                                <h6 class="mt-3">Body</h6>
-                                <pre class="bg-light p-2 small" style="max-height:300px;overflow:auto">${typeof data.response_body === 'object' ? JSON.stringify(data.response_body, null, 2) : escapeHtml(data.response_body)}</pre>
-                            ` : ''}
-
-                            ${data.has_exception ? `
-                                <div class="alert alert-danger mt-3">
-                                    <h6><i class="fas fa-exclamation-triangle"></i> Exception</h6>
-                                    <p class="mb-1"><strong>${data.exception_class}</strong></p>
-                                    <p class="mb-2">${escapeHtml(data.exception_message)}</p>
-                                    <details>
-                                        <summary>Stack Trace</summary>
-                                        <pre class="small mt-2" style="max-height:200px;overflow:auto">${escapeHtml(data.exception_trace)}</pre>
-                                    </details>
-                                </div>
-                            ` : ''}
-                        </div>
+                        ${data.request_body ? `
+                            <h6 class="mt-3">Body</h6>
+                            <pre class="bg-light p-2 small" style="max-height:300px;overflow:auto">${typeof data.request_body === 'object' ? JSON.stringify(data.request_body, null, 2) : escapeHtml(data.request_body)}</pre>
+                        ` : ''}
                     </div>
                 </div>
             </div>
-        `;
-    }
+            <div class="col-md-6">
+                <div class="card card-outline card-${data.status_color}">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            Response
+                            <span class="badge badge-${data.status_color}">${data.status_code}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Time:</strong> ${data.responded_at}</p>
+                        <p><strong>Duration:</strong> ${data.duration}</p>
+                        <p><strong>Size:</strong> ${data.response_size || 'N/A'}</p>
+                        <p><strong>Memory Peak:</strong> ${data.memory_peak_mb || 'N/A'}</p>
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+                        <h6 class="mt-3">Headers</h6>
+                        <pre class="bg-light p-2 small" style="max-height:200px;overflow:auto">${JSON.stringify(data.response_headers, null, 2)}</pre>
 
-    bindRowClicks();
-});
+                        ${data.response_body ? `
+                            <h6 class="mt-3">Body</h6>
+                            <pre class="bg-light p-2 small" style="max-height:300px;overflow:auto">${typeof data.response_body === 'object' ? JSON.stringify(data.response_body, null, 2) : escapeHtml(data.response_body)}</pre>
+                        ` : ''}
+
+                        ${data.has_exception ? `
+                            <div class="alert alert-danger mt-3">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Exception</h6>
+                                <p class="mb-1"><strong>${data.exception_class}</strong></p>
+                                <p class="mb-2">${escapeHtml(data.exception_message)}</p>
+                                <details>
+                                    <summary>Stack Trace</summary>
+                                    <pre class="small mt-2" style="max-height:200px;overflow:auto">${escapeHtml(data.exception_trace)}</pre>
+                                </details>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 </script>
-@endpush
+@endsection

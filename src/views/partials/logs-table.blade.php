@@ -12,7 +12,7 @@
     </thead>
     <tbody>
         @forelse($logs as $log)
-            <tr class="log-row" data-log-id="{{ $log->id }}" style="cursor: pointer">
+            <tr class="log-row" data-log-id="{{ $log->id }}" data-json-url="{{ route('api-debugger.logs.json', $log) }}" style="cursor: pointer" onclick="showLogDetail(this)">
                 <td>
                     <small>{{ $log->requested_at->format('H:i:s') }}</small>
                     <br>

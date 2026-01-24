@@ -22,36 +22,40 @@
         {{-- Stats Row --}}
         <div class="row">
             <div class="col-lg-3 col-6">
-                <x-AdminLteUiComponentsView::small-box
-                    title="{{ number_format($stats['total_logs']) }}"
-                    subtitle="Total Logs"
-                    icon="fas fa-database"
-                    color="info"
-                />
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['total_logs']) }}</h3>
+                        <p>Total Logs</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-database"></i></div>
+                </div>
             </div>
             <div class="col-lg-3 col-6">
-                <x-AdminLteUiComponentsView::small-box
-                    title="{{ number_format($stats['logs_today']) }}"
-                    subtitle="Logs Today"
-                    icon="fas fa-calendar-day"
-                    color="success"
-                />
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['logs_today']) }}</h3>
+                        <p>Logs Today</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-calendar-day"></i></div>
+                </div>
             </div>
             <div class="col-lg-3 col-6">
-                <x-AdminLteUiComponentsView::small-box
-                    title="{{ $stats['active_sessions'] }}"
-                    subtitle="Active Sessions"
-                    icon="fas fa-satellite-dish"
-                    color="warning"
-                />
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ $stats['active_sessions'] }}</h3>
+                        <p>Active Sessions</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-satellite-dish"></i></div>
+                </div>
             </div>
             <div class="col-lg-3 col-6">
-                <x-AdminLteUiComponentsView::small-box
-                    title="{{ $stats['error_rate'] }}%"
-                    subtitle="Error Rate Today"
-                    icon="fas fa-exclamation-triangle"
-                    color="{{ $stats['error_rate'] > 10 ? 'danger' : 'secondary' }}"
-                />
+                <div class="small-box bg-{{ $stats['error_rate'] > 10 ? 'danger' : 'secondary' }}">
+                    <div class="inner">
+                        <h3>{{ $stats['error_rate'] }}%</h3>
+                        <p>Error Rate Today</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
             </div>
         </div>
 

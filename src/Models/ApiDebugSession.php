@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class ApiDebugSession extends Model
 {
@@ -13,10 +14,20 @@ class ApiDebugSession extends Model
         'tenant_id',
         'user_id',
         'label',
+        'token',
         'active',
         'expires_at',
         'created_by',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (ApiDebugSession $session) {
+            if (empty($session->token)) {
+                $session->token = Str::random(32);
+            }
+        });
+    }
 
     protected $casts = [
         'active' => 'boolean',
@@ -122,14 +133,20 @@ class ApiDebugSession extends Model
 
     public function getTargetLabel(): string
     {
-        if ($this->user_id && $this->user) {
-            return 'User: ' . ($this->user->name ?? $this->user->email ?? "#{$this->user_id}");
+        if ($this->user_id) {
+            $label = 'User: ';
+            if ($this->user) {
+                $label .= $this->user->name ?? $this->user->email ?? "#{$this->user_id}";
+            } else {
+                $label .= "#{$this->user_id}";
+            }
+            return $label;
         }
 
         if ($this->tenant_id) {
             return 'Tenant: ' . $this->tenant_id;
         }
 
-        return 'Global';
+        return 'All Requests';
     }
 }

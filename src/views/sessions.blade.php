@@ -20,7 +20,10 @@
 <section class="content">
     <div class="container-fluid">
         @if(session('success'))
-            <x-AdminLteUiComponentsView::alert type="success" :message="session('success')" />
+            <div class="alert alert-success alert-dismissible fade show">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                {{ session('success') }}
+            </div>
         @endif
 
         <div class="row">
@@ -34,31 +37,51 @@
                     </div>
                     <form action="{{ route('api-debugger.sessions.create') }}" method="POST">
                         @csrf
+
+                        @if($errors->any())
+                            <div class="alert alert-danger mx-3 mt-3">
+                                <ul class="mb-0">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
                         <div class="card-body">
                             <div class="form-group">
                                 <label>Debug Type</label>
                                 <div class="custom-control custom-radio">
+                                    <input type="radio" id="type-all" name="type" value="all"
+                                           class="custom-control-input" {{ old('type') === 'all' ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="type-all">
+                                        <strong>All Requests</strong>
+                                        <small class="text-muted d-block">Logs every API request automatically</small>
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-radio mt-2">
                                     <input type="radio" id="type-tenant" name="type" value="tenant"
-                                           class="custom-control-input" checked>
-                                    <label class="custom-control-label" for="type-tenant">Tenant</label>
+                                           class="custom-control-input" {{ old('type', 'tenant') === 'tenant' ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="type-tenant">
+                                        <strong>Tenant</strong>
+                                        <small class="text-muted d-block">Logs requests from a specific tenant</small>
+                                    </label>
                                 </div>
-                                <div class="custom-control custom-radio">
+                                <div class="custom-control custom-radio mt-2">
                                     <input type="radio" id="type-user" name="type" value="user"
-                                           class="custom-control-input">
-                                    <label class="custom-control-label" for="type-user">User</label>
+                                           class="custom-control-input" {{ old('type') === 'user' ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="type-user">
+                                        <strong>User</strong>
+                                        <small class="text-muted d-block">Logs requests from authenticated user (requires auth middleware)</small>
+                                    </label>
                                 </div>
                             </div>
 
-                            <div class="form-group" id="tenant-field">
-                                <label for="tenant_id">Tenant ID</label>
-                                <input type="text" name="tenant_id" id="tenant_id" class="form-control"
-                                       placeholder="Enter tenant ID">
-                            </div>
-
-                            <div class="form-group d-none" id="user-field">
-                                <label for="user_id">User ID</label>
-                                <input type="number" name="user_id" id="user_id" class="form-control"
-                                       placeholder="Enter user ID">
+                            <div class="form-group" id="target-field">
+                                <label for="target_id" id="target-label">Tenant ID</label>
+                                <input type="text" name="target_id" id="target_id"
+                                       class="form-control @error('target_id') is-invalid @enderror"
+                                       placeholder="Enter tenant ID" value="{{ old('target_id') }}">
                             </div>
 
                             <div class="form-group">
@@ -119,6 +142,25 @@
                                                 <strong>{{ $session->getTargetLabel() }}</strong>
                                                 @if($session->label)
                                                     <br><small class="text-muted">{{ $session->label }}</small>
+                                                @endif
+                                                @if($session->token)
+                                                    <div class="mt-1">
+                                                        <input type="text" class="form-control form-control-sm d-inline-block"
+                                                               style="width: auto; font-size: 11px;"
+                                                               value="{{ $session->token }}"
+                                                               id="token-{{ $session->id }}"
+                                                               readonly>
+                                                        <button type="button" class="btn btn-xs btn-secondary"
+                                                                onclick="copyToken('{{ $session->id }}', '{{ $session->token }}')"
+                                                                title="Copy token">
+                                                            <i class="fas fa-copy"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-xs btn-info"
+                                                                onclick="copyToken('{{ $session->id }}', 'X-Debug-Token: {{ $session->token }}')"
+                                                                title="Copy as header">
+                                                            Header
+                                                        </button>
+                                                    </div>
                                                 @endif
                                             </td>
                                             <td>
@@ -253,26 +295,53 @@
 </section>
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script>
+function copyToken(sessionId, text) {
+    var input = document.getElementById('token-' + sessionId);
+    var temp = document.createElement('textarea');
+    temp.value = text;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand('copy');
+    document.body.removeChild(temp);
+
+    // Flash feedback
+    input.style.backgroundColor = '#d4edda';
+    setTimeout(function() {
+        input.style.backgroundColor = '';
+    }, 500);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    const typeAll = document.getElementById('type-all');
     const typeTenant = document.getElementById('type-tenant');
     const typeUser = document.getElementById('type-user');
-    const tenantField = document.getElementById('tenant-field');
-    const userField = document.getElementById('user-field');
+    const targetField = document.getElementById('target-field');
+    const targetLabel = document.getElementById('target-label');
+    const targetInput = document.getElementById('target_id');
 
     function toggleFields() {
-        if (typeTenant.checked) {
-            tenantField.classList.remove('d-none');
-            userField.classList.add('d-none');
+        if (typeAll.checked) {
+            targetField.classList.add('d-none');
+            targetInput.removeAttribute('required');
         } else {
-            tenantField.classList.add('d-none');
-            userField.classList.remove('d-none');
+            targetField.classList.remove('d-none');
+            targetInput.setAttribute('required', 'required');
+            if (typeTenant.checked) {
+                targetLabel.textContent = 'Tenant ID';
+                targetInput.placeholder = 'Enter tenant ID';
+            } else {
+                targetLabel.textContent = 'User ID';
+                targetInput.placeholder = 'Enter user ID';
+            }
         }
     }
 
+    typeAll.addEventListener('change', toggleFields);
     typeTenant.addEventListener('change', toggleFields);
     typeUser.addEventListener('change', toggleFields);
+    toggleFields();
 });
 </script>
-@endpush
+@endsection

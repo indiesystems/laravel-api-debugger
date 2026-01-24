@@ -93,24 +93,48 @@
                             <dd class="col-sm-8"><small>{{ $log->user_agent ?? 'N/A' }}</small></dd>
                         </dl>
 
-                        <x-AdminLteUiComponentsView::collapsible-card title="Headers" :collapsed="true">
-                            <pre class="mb-0 small">{{ json_encode($log->getRequestHeadersForDisplay(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                        </x-AdminLteUiComponentsView::collapsible-card>
+                        <div class="card card-secondary collapsed-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Headers</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <pre class="mb-0 small">{{ json_encode($log->getRequestHeadersForDisplay(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                            </div>
+                        </div>
 
                         @if($log->request_query)
-                            <x-AdminLteUiComponentsView::collapsible-card title="Query Parameters" :collapsed="true">
-                                <pre class="mb-0 small">{{ json_encode($log->request_query, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                            </x-AdminLteUiComponentsView::collapsible-card>
+                            <div class="card card-secondary collapsed-card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Query Parameters</h3>
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <pre class="mb-0 small">{{ json_encode($log->request_query, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                </div>
+                            </div>
                         @endif
 
                         @if($log->request_body)
-                            <x-AdminLteUiComponentsView::collapsible-card title="Body" :collapsed="false">
-                                @if($log->is_json_request)
-                                    <pre class="mb-0 small">{{ json_encode($log->parsed_request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                                @else
-                                    <pre class="mb-0 small">{{ $log->request_body }}</pre>
-                                @endif
-                            </x-AdminLteUiComponentsView::collapsible-card>
+                            <div class="card card-secondary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Body</h3>
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    @if($log->is_json_request)
+                                        <pre class="mb-0 small">{{ json_encode($log->parsed_request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                    @else
+                                        <pre class="mb-0 small">{{ $log->request_body }}</pre>
+                                    @endif
+                                </div>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -143,18 +167,34 @@
                             <dd class="col-sm-8">{{ $log->memory_peak_mb ? round($log->memory_peak_mb, 2) . ' MB' : 'N/A' }}</dd>
                         </dl>
 
-                        <x-AdminLteUiComponentsView::collapsible-card title="Headers" :collapsed="true">
-                            <pre class="mb-0 small">{{ json_encode($log->getResponseHeadersForDisplay(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                        </x-AdminLteUiComponentsView::collapsible-card>
+                        <div class="card card-secondary collapsed-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Headers</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <pre class="mb-0 small">{{ json_encode($log->getResponseHeadersForDisplay(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                            </div>
+                        </div>
 
                         @if($log->response_body)
-                            <x-AdminLteUiComponentsView::collapsible-card title="Body" :collapsed="false">
-                                @if($log->is_json_response)
-                                    <pre class="mb-0 small">{{ json_encode($log->parsed_response_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                                @else
-                                    <pre class="mb-0 small">{{ $log->response_body }}</pre>
-                                @endif
-                            </x-AdminLteUiComponentsView::collapsible-card>
+                            <div class="card card-secondary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Body</h3>
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    @if($log->is_json_response)
+                                        <pre class="mb-0 small">{{ json_encode($log->parsed_response_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                    @else
+                                        <pre class="mb-0 small">{{ $log->response_body }}</pre>
+                                    @endif
+                                </div>
+                            </div>
                         @endif
 
                         @if($log->has_exception)
@@ -163,9 +203,17 @@
                                 <p class="mb-1"><strong>{{ $log->exception_class }}</strong></p>
                                 <p>{{ $log->exception_message }}</p>
 
-                                <x-AdminLteUiComponentsView::collapsible-card title="Stack Trace" :collapsed="true" color="danger">
-                                    <pre class="mb-0 small text-danger">{{ $log->exception_trace }}</pre>
-                                </x-AdminLteUiComponentsView::collapsible-card>
+                                <div class="card card-danger collapsed-card mt-2">
+                                    <div class="card-header">
+                                        <h3 class="card-title">Stack Trace</h3>
+                                        <div class="card-tools">
+                                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <pre class="mb-0 small text-danger">{{ $log->exception_trace }}</pre>
+                                    </div>
+                                </div>
                             </div>
                         @endif
                     </div>

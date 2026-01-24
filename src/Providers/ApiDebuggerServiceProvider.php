@@ -12,6 +12,7 @@ use IndieSystems\ApiDebugger\Console\EnableDebugCommand;
 use IndieSystems\ApiDebugger\Console\DisableDebugCommand;
 use IndieSystems\ApiDebugger\Console\PruneLogsCommand;
 use IndieSystems\ApiDebugger\Console\StatusCommand;
+use IndieSystems\ApiDebugger\Console\TestApiCommand;
 
 class ApiDebuggerServiceProvider extends ServiceProvider
 {
@@ -60,6 +61,7 @@ class ApiDebuggerServiceProvider extends ServiceProvider
                 DisableDebugCommand::class,
                 PruneLogsCommand::class,
                 StatusCommand::class,
+                TestApiCommand::class,
             ]);
 
             // Publish config

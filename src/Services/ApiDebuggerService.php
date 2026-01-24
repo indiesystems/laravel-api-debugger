@@ -29,6 +29,22 @@ class ApiDebuggerService
     */
 
     /**
+     * Enable global debugging (token-based only).
+     */
+    public function enableGlobal(?int $minutes = null, ?int $createdBy = null): ApiDebugSession
+    {
+        $minutes = $this->clampDuration($minutes);
+
+        return ApiDebugSession::create([
+            'tenant_id' => null,
+            'user_id' => null,
+            'active' => true,
+            'expires_at' => now()->addMinutes($minutes),
+            'created_by' => $createdBy,
+        ]);
+    }
+
+    /**
      * Enable debugging for a specific tenant.
      */
     public function enableForTenant(string $tenantId, ?int $minutes = null, ?int $createdBy = null): ApiDebugSession
@@ -48,7 +64,7 @@ class ApiDebuggerService
     /**
      * Enable debugging for a specific user.
      */
-    public function enableForUser(int $userId, ?int $minutes = null, ?int $createdBy = null): ApiDebugSession
+    public function enableForUser(string|int $userId, ?int $minutes = null, ?int $createdBy = null): ApiDebugSession
     {
         $minutes = $this->clampDuration($minutes);
 
@@ -65,7 +81,7 @@ class ApiDebuggerService
     /**
      * Enable debugging for a specific tenant + user combination.
      */
-    public function enableForTenantUser(string $tenantId, int $userId, ?int $minutes = null, ?int $createdBy = null): ApiDebugSession
+    public function enableForTenantUser(string $tenantId, string|int $userId, ?int $minutes = null, ?int $createdBy = null): ApiDebugSession
     {
         $minutes = $this->clampDuration($minutes);
 
@@ -105,7 +121,7 @@ class ApiDebuggerService
     /**
      * Disable all sessions for a user.
      */
-    public function disableForUser(int $userId): int
+    public function disableForUser(string|int $userId): int
     {
         $sessions = ApiDebugSession::forUser($userId)->active()->get();
 
@@ -118,9 +134,28 @@ class ApiDebuggerService
 
     /**
      * Get active session for the current request context.
+     *
+     * Session matching priority:
+     * 1. X-Debug-Token header (if provided)
+     * 2. Global session (logs all requests)
+     * 3. Tenant + User combination
+     * 4. User only (if authenticated)
+     * 5. Tenant only
      */
     public function getActiveSession(Request $request): ?ApiDebugSession
     {
+        // First, check for explicit debug token header
+        $debugToken = $request->header('X-Debug-Token');
+        if ($debugToken) {
+            return $this->getSessionByToken($debugToken);
+        }
+
+        // Check for global session (logs all requests)
+        $globalSession = $this->getGlobalSession();
+        if ($globalSession) {
+            return $globalSession;
+        }
+
         if (!config('api-debugger.tenancy.enabled', true)) {
             $tenantId = null;
         } else {
@@ -129,6 +164,11 @@ class ApiDebuggerService
 
         $userId = $request->user()?->id;
 
+        // If we have neither tenant nor user, no session can match
+        if ($tenantId === null && $userId === null) {
+            return null;
+        }
+
         $cacheKey = $this->getSessionCacheKey($tenantId, $userId);
         $cacheTtl = config('api-debugger.session.cache_ttl', 60);
 
@@ -136,20 +176,59 @@ class ApiDebuggerService
             return ApiDebugSession::query()
                 ->active()
                 ->where(function ($query) use ($tenantId, $userId) {
-                    // Match tenant-specific session
-                    $query->where(function ($q) use ($tenantId) {
-                        $q->where('tenant_id', $tenantId)->whereNull('user_id');
-                    })
-                    // Or user-specific session
-                    ->orWhere(function ($q) use ($userId) {
-                        $q->where('user_id', $userId)->whereNull('tenant_id');
-                    })
-                    // Or tenant+user specific session
-                    ->orWhere(function ($q) use ($tenantId, $userId) {
-                        $q->where('tenant_id', $tenantId)->where('user_id', $userId);
-                    });
+                    // Match tenant-specific session (only if tenant is set)
+                    if ($tenantId !== null) {
+                        $query->where(function ($q) use ($tenantId) {
+                            $q->where('tenant_id', $tenantId)->whereNull('user_id');
+                        });
+                    }
+                    // Or user-specific session (only if user is authenticated)
+                    if ($userId !== null) {
+                        $query->orWhere(function ($q) use ($userId) {
+                            $q->where('user_id', $userId)->whereNull('tenant_id');
+                        });
+                    }
+                    // Or tenant+user specific session (only if both are set)
+                    if ($tenantId !== null && $userId !== null) {
+                        $query->orWhere(function ($q) use ($tenantId, $userId) {
+                            $q->where('tenant_id', $tenantId)->where('user_id', $userId);
+                        });
+                    }
                 })
                 ->orderByDesc('created_at')
+                ->first();
+        });
+    }
+
+    /**
+     * Get active global session (logs all requests).
+     */
+    public function getGlobalSession(): ?ApiDebugSession
+    {
+        $cacheKey = 'api_debugger.session.global';
+        $cacheTtl = config('api-debugger.session.cache_ttl', 60);
+
+        return cache()->remember($cacheKey, $cacheTtl, function () {
+            return ApiDebugSession::query()
+                ->active()
+                ->whereNull('tenant_id')
+                ->whereNull('user_id')
+                ->orderByDesc('created_at')
+                ->first();
+        });
+    }
+
+    /**
+     * Get active session by debug token.
+     */
+    public function getSessionByToken(string $token): ?ApiDebugSession
+    {
+        $cacheKey = 'api_debugger.session.token.' . $token;
+        $cacheTtl = config('api-debugger.session.cache_ttl', 60);
+
+        return cache()->remember($cacheKey, $cacheTtl, function () use ($token) {
+            return ApiDebugSession::where('token', $token)
+                ->active()
                 ->first();
         });
     }
@@ -351,8 +430,19 @@ class ApiDebuggerService
 
     protected function clearSessionCache(ApiDebugSession $session): void
     {
+        // Clear specific session cache
         $cacheKey = $this->getSessionCacheKey($session->tenant_id, $session->user_id);
         cache()->forget($cacheKey);
+
+        // Clear global session cache if this is a global session
+        if ($session->tenant_id === null && $session->user_id === null) {
+            cache()->forget('api_debugger.session.global');
+        }
+
+        // Clear token cache if session has a token
+        if ($session->token) {
+            cache()->forget('api_debugger.session.token.' . $session->token);
+        }
     }
 
     protected function redactHeaders(array $headers): array
