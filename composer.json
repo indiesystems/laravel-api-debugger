@@ -1,0 +1,32 @@
+{
+    "name": "indiesystems/laravel-api-debugger",
+    "description": "A Laravel package for debugging API requests/responses with AdminLTE UI",
+    "keywords": ["laravel", "indiesystems", "api", "debugger", "logging", "adminlte", "bootstrap"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [{
+        "name": "Chris Dimas",
+        "email": "chris@indie.systems",
+        "homepage": "https://indie.systems",
+        "role": "Developer"
+    }],
+    "homepage": "https://github.com/indiesystems/laravel-api-debugger",
+    "autoload": {
+        "psr-4": {
+            "IndieSystems\\ApiDebugger\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "IndieSystems\\ApiDebugger\\Providers\\ApiDebuggerServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1",
+        "indiesystems/laravel-adminlte-ui-components": "*"
+    }
+}
