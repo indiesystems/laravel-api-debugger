@@ -143,20 +143,31 @@ class ApiDebugSession extends Model
 
     public function getTargetLabel(): string
     {
+        $userName = null;
         if ($this->user_id) {
-            $label = 'User: ';
             if ($this->user) {
-                $label .= $this->user->name ?? $this->user->email ?? "#{$this->user_id}";
+                $userName = $this->user->name ?? $this->user->email ?? "#{$this->user_id}";
             } else {
-                $label .= "#{$this->user_id}";
+                $userName = "#{$this->user_id}";
             }
-            return $label;
         }
 
+        // Both tenant and user (tenant+user combo)
+        if ($this->tenant_id && $this->user_id) {
+            return "Tenant: {$this->tenant_id} / User: {$userName}";
+        }
+
+        // Tenant only
         if ($this->tenant_id) {
             return 'Tenant: ' . $this->tenant_id;
         }
 
-        return 'All Requests';
+        // User only (central app)
+        if ($this->user_id) {
+            return "User: {$userName}";
+        }
+
+        // Neither tenant nor user = token-based
+        return 'Token-Based';
     }
 }

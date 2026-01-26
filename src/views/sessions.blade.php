@@ -54,19 +54,11 @@
                             <div class="form-group">
                                 <label>Debug Type</label>
                                 <div class="custom-control custom-radio">
-                                    <input type="radio" id="type-all" name="type" value="all"
-                                           class="custom-control-input" {{ old('type') === 'all' ? 'checked' : '' }}>
-                                    <label class="custom-control-label" for="type-all">
-                                        <strong>All Requests</strong>
-                                        <small class="text-muted d-block">Logs every API request automatically</small>
-                                    </label>
-                                </div>
-                                <div class="custom-control custom-radio mt-2">
                                     <input type="radio" id="type-tenant" name="type" value="tenant"
                                            class="custom-control-input" {{ old('type', 'tenant') === 'tenant' ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="type-tenant">
                                         <strong>Tenant</strong>
-                                        <small class="text-muted d-block">Logs requests from a specific tenant</small>
+                                        <small class="text-muted d-block">Auto-matches requests from a specific tenant</small>
                                     </label>
                                 </div>
                                 <div class="custom-control custom-radio mt-2">
@@ -74,9 +66,22 @@
                                            class="custom-control-input" {{ old('type') === 'user' ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="type-user">
                                         <strong>User</strong>
-                                        <small class="text-muted d-block">Logs requests from authenticated user (requires auth middleware)</small>
+                                        <small class="text-muted d-block">Auto-matches authenticated user's requests (central app)</small>
                                     </label>
                                 </div>
+                                <div class="custom-control custom-radio mt-2">
+                                    <input type="radio" id="type-all" name="type" value="all"
+                                           class="custom-control-input" {{ old('type') === 'all' ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="type-all">
+                                        <strong>Token-Based</strong>
+                                        <small class="text-muted d-block">Logs any request with the session token</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info small py-2 mb-3" id="type-info">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <span id="type-info-text">Requests from this tenant will be logged automatically.</span>
                             </div>
 
                             <div class="form-group" id="target-field">
@@ -108,6 +113,35 @@
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {{-- Debug Token Usage --}}
+                <div class="card card-outline card-secondary">
+                    <div class="card-header py-2">
+                        <h3 class="card-title">
+                            <i class="fas fa-code mr-2"></i>Debug Token Usage
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body py-2">
+                        <p class="mb-2 small">Pass the token with your requests:</p>
+                        <div class="mb-2">
+                            <strong class="small">Header:</strong>
+                            <code class="d-block p-1 small" style="background:#212529;color:#fff;">X-Debug-Token: &lt;token&gt;</code>
+                        </div>
+                        <div class="mb-2">
+                            <strong class="small">Query param:</strong>
+                            <code class="d-block p-1 small" style="background:#212529;color:#fff;">?_debug_token=&lt;token&gt;</code>
+                        </div>
+                        <div>
+                            <strong class="small">cURL example:</strong>
+                            <code class="d-block p-1 small" style="background:#212529;color:#fff;font-size:10px;">curl -H "X-Debug-Token: &lt;token&gt;" https://api.example.com/endpoint</code>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -322,21 +356,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetField = document.getElementById('target-field');
     const targetLabel = document.getElementById('target-label');
     const targetInput = document.getElementById('target_id');
+    const typeInfo = document.getElementById('type-info');
+    const typeInfoText = document.getElementById('type-info-text');
 
     function toggleFields() {
         if (typeAll.checked) {
             targetField.classList.add('d-none');
             targetInput.removeAttribute('required');
-        } else {
+            typeInfo.className = 'alert alert-warning small py-2 mb-3';
+            typeInfoText.innerHTML = '<strong>Token required.</strong> Pass <code>X-Debug-Token</code> header with requests to log them.';
+        } else if (typeTenant.checked) {
             targetField.classList.remove('d-none');
             targetInput.setAttribute('required', 'required');
-            if (typeTenant.checked) {
-                targetLabel.textContent = 'Tenant ID';
-                targetInput.placeholder = 'Enter tenant ID';
-            } else {
-                targetLabel.textContent = 'User ID';
-                targetInput.placeholder = 'Enter user ID';
-            }
+            targetLabel.textContent = 'Tenant ID';
+            targetInput.placeholder = 'Enter tenant ID (e.g., acme)';
+            typeInfo.className = 'alert alert-info small py-2 mb-3';
+            typeInfoText.innerHTML = 'Requests from this tenant are logged automatically. Token can also be used.';
+        } else if (typeUser.checked) {
+            targetField.classList.remove('d-none');
+            targetInput.setAttribute('required', 'required');
+            targetLabel.textContent = 'User ID';
+            targetInput.placeholder = 'Enter user ID';
+            typeInfo.className = 'alert alert-info small py-2 mb-3';
+            typeInfoText.innerHTML = 'Requests from this user (central app only) are logged automatically. Token can also be used.';
         }
     }
 

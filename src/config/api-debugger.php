@@ -61,6 +61,11 @@ return [
 
         // Cache TTL for session lookups (seconds)
         'cache_ttl' => 60,
+
+        // Token-based sessions (no tenant/user): require token in requests?
+        // true = only logs requests that include X-Debug-Token header (safe for production)
+        // false = logs ALL requests (dangerous in production, ok for local dev)
+        'global_require_token' => env('API_DEBUGGER_GLOBAL_REQUIRE_TOKEN', true),
     ],
 
     /*

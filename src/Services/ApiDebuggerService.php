@@ -136,11 +136,14 @@ class ApiDebuggerService
      * Get active session for the current request context.
      *
      * Session matching priority:
-     * 1. X-Debug-Token header (if provided)
-     * 2. Global session (logs all requests)
-     * 3. Tenant + User combination
-     * 4. User only (if authenticated)
-     * 5. Tenant only
+     * 1. X-Debug-Token header (explicit override)
+     * 2. Tenant + User combination (most specific - user within tenant)
+     * 3. Tenant only (if in tenant context)
+     * 4. User only (if in central app context - NO tenant)
+     * 5. Global session (catch-all fallback)
+     *
+     * Note: User-only sessions are for central app users.
+     * Requests from tenants should NOT match user-only sessions.
      */
     public function getActiveSession(Request $request): ?ApiDebugSession
     {
@@ -150,12 +153,7 @@ class ApiDebuggerService
             return $this->getSessionByToken($debugToken);
         }
 
-        // Check for global session (logs all requests)
-        $globalSession = $this->getGlobalSession();
-        if ($globalSession) {
-            return $globalSession;
-        }
-
+        // Detect tenant and user context
         if (!config('api-debugger.tenancy.enabled', true)) {
             $tenantId = null;
         } else {
@@ -164,40 +162,53 @@ class ApiDebuggerService
 
         $userId = $request->user()?->id;
 
-        // If we have neither tenant nor user, no session can match
-        if ($tenantId === null && $userId === null) {
-            return null;
+        // If we have tenant or user, try to match a specific session
+        if ($tenantId !== null || $userId !== null) {
+            $cacheKey = $this->getSessionCacheKey($tenantId, $userId);
+            $cacheTtl = config('api-debugger.session.cache_ttl', 60);
+
+            $session = cache()->remember($cacheKey, $cacheTtl, function () use ($tenantId, $userId) {
+                $query = ApiDebugSession::query()->active();
+
+                if ($tenantId !== null) {
+                    // Request is from a tenant context
+                    $query->where(function ($q) use ($tenantId, $userId) {
+                        // Match tenant+user session (most specific)
+                        if ($userId !== null) {
+                            $q->where(function ($sub) use ($tenantId, $userId) {
+                                $sub->where('tenant_id', $tenantId)->where('user_id', $userId);
+                            });
+                            $q->orWhere(function ($sub) use ($tenantId) {
+                                $sub->where('tenant_id', $tenantId)->whereNull('user_id');
+                            });
+                        } else {
+                            // No user, just match tenant
+                            $q->where('tenant_id', $tenantId)->whereNull('user_id');
+                        }
+                    });
+                } else {
+                    // Request is from central app (no tenant)
+                    // Only match user-only sessions (tenant_id must be null)
+                    if ($userId !== null) {
+                        $query->where('user_id', $userId)->whereNull('tenant_id');
+                    }
+                }
+
+                return $query->orderByDesc('created_at')->first();
+            });
+
+            if ($session) {
+                return $session;
+            }
         }
 
-        $cacheKey = $this->getSessionCacheKey($tenantId, $userId);
-        $cacheTtl = config('api-debugger.session.cache_ttl', 60);
+        // Fallback to global session only if token is NOT required
+        // When global_require_token is true (default), global sessions only match via token (step 1)
+        if (!config('api-debugger.session.global_require_token', true)) {
+            return $this->getGlobalSession();
+        }
 
-        return cache()->remember($cacheKey, $cacheTtl, function () use ($tenantId, $userId) {
-            return ApiDebugSession::query()
-                ->active()
-                ->where(function ($query) use ($tenantId, $userId) {
-                    // Match tenant-specific session (only if tenant is set)
-                    if ($tenantId !== null) {
-                        $query->where(function ($q) use ($tenantId) {
-                            $q->where('tenant_id', $tenantId)->whereNull('user_id');
-                        });
-                    }
-                    // Or user-specific session (only if user is authenticated)
-                    if ($userId !== null) {
-                        $query->orWhere(function ($q) use ($userId) {
-                            $q->where('user_id', $userId)->whereNull('tenant_id');
-                        });
-                    }
-                    // Or tenant+user specific session (only if both are set)
-                    if ($tenantId !== null && $userId !== null) {
-                        $query->orWhere(function ($q) use ($tenantId, $userId) {
-                            $q->where('tenant_id', $tenantId)->where('user_id', $userId);
-                        });
-                    }
-                })
-                ->orderByDesc('created_at')
-                ->first();
-        });
+        return null;
     }
 
     /**
