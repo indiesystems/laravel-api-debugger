@@ -165,9 +165,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Automatically detects tenant from common packages:
-    | - stancl/tenancy
-    | - spatie/laravel-multitenancy
-    | - tenancyforlaravel
+    | - stancl/tenancy (via tenant() helper)
+    | - spatie/laravel-multitenancy (via Tenant::current())
     |
     */
     'tenancy' => [

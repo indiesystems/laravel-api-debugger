@@ -21,16 +21,11 @@ class TenancyDetector
         }
 
         // Try spatie/laravel-multitenancy
-        if (class_exists(\Spatie\Multitenancy\Landlord::class)) {
-            $tenant = app(\Spatie\Multitenancy\Landlord::class)->currentTenant();
+        if (class_exists(\Spatie\Multitenancy\Models\Tenant::class)) {
+            $tenant = \Spatie\Multitenancy\Models\Tenant::current();
             if ($tenant) {
                 return (string) $tenant->id;
             }
-        }
-
-        // Try tenancyforlaravel (another common package)
-        if (app()->bound('tenancy') && app('tenancy')->initialized) {
-            return app('tenancy')->tenant?->id;
         }
 
         // No tenancy package detected a tenant = not in tenant context
@@ -46,9 +41,17 @@ class TenancyDetector
             return 'No Tenant';
         }
 
-        // Try to get a more friendly name from common packages
-        if (function_exists('tenant') && tenant() && tenant()->id === $tenantId) {
+        // Try to get a friendly name from stancl/tenancy
+        if (function_exists('tenant') && tenant() && (string) tenant()->id === $tenantId) {
             return tenant()->name ?? tenant()->domain ?? $tenantId;
+        }
+
+        // Try to get a friendly name from spatie/laravel-multitenancy
+        if (class_exists(\Spatie\Multitenancy\Models\Tenant::class)) {
+            $tenant = \Spatie\Multitenancy\Models\Tenant::current();
+            if ($tenant && (string) $tenant->id === $tenantId) {
+                return $tenant->name ?? $tenantId;
+            }
         }
 
         return $tenantId;
