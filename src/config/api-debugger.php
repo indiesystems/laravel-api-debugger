@@ -163,6 +163,12 @@ return [
     |--------------------------------------------------------------------------
     | Tenancy Detection
     |--------------------------------------------------------------------------
+    |
+    | Automatically detects tenant from common packages:
+    | - stancl/tenancy
+    | - spatie/laravel-multitenancy
+    | - tenancyforlaravel
+    |
     */
     'tenancy' => [
         // Enable tenant-aware debugging
@@ -170,9 +176,6 @@ return [
 
         // Custom detector class (null = use built-in detector)
         'detector' => null,
-
-        // Header name for tenant ID (if using header-based tenancy)
-        'header' => 'X-Tenant-ID',
     ],
 
     /*

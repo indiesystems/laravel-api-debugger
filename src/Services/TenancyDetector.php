@@ -9,11 +9,8 @@ class TenancyDetector
     /**
      * Detect the current tenant ID from the request.
      *
-     * Checks multiple sources in order of priority:
-     * 1. Common tenancy packages (stancl/tenancy, spatie/laravel-multitenancy)
-     * 2. Request header (configurable)
-     * 3. Subdomain
-     * 4. Route parameter
+     * Checks common tenancy packages. If no package has initialized
+     * a tenant, returns null (not in tenant context).
      */
     public function detect(Request $request): ?string
     {
@@ -36,30 +33,7 @@ class TenancyDetector
             return app('tenancy')->tenant?->id;
         }
 
-        // Check header
-        $headerName = config('api-debugger.tenancy.header', 'X-Tenant-ID');
-        if ($tenantId = $request->header($headerName)) {
-            return $tenantId;
-        }
-
-        // Check route parameter
-        if ($tenantId = $request->route('tenant')) {
-            return (string) $tenantId;
-        }
-
-        // Check subdomain
-        $host = $request->getHost();
-        $parts = explode('.', $host);
-
-        // If more than 2 parts (e.g., tenant.example.com), first part might be tenant
-        if (count($parts) > 2) {
-            $subdomain = $parts[0];
-            // Exclude common non-tenant subdomains
-            if (!in_array($subdomain, ['www', 'api', 'app', 'admin', 'mail', 'ftp'])) {
-                return $subdomain;
-            }
-        }
-
+        // No tenancy package detected a tenant = not in tenant context
         return null;
     }
 
