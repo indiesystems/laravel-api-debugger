@@ -62,6 +62,7 @@ class ApiDebuggerServiceProvider extends ServiceProvider
                 PruneLogsCommand::class,
                 StatusCommand::class,
                 TestApiCommand::class,
+                \IndieSystems\ApiDebugger\Console\InstallCommand::class,
             ]);
 
             // Publish config
